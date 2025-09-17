@@ -174,28 +174,5 @@ Focus on practical, executable recommendations for both immediate stabilization 
   }
 }
 
-// Default export that handles both the MCP agent and regular HTTP requests
-export default {
-  async fetch(request: Request, env: any, context: any): Promise<Response> {
-    // Check if this is an MCP request to the /sse endpoint
-    const url = new URL(request.url);
-    
-    if (url.pathname === "/sse") {
-      // Create and initialize the MCP agent
-      const agent = new AdvisoryBoardMCP();
-      await agent.init();
-      
-      // Handle the MCP SSE request using the agents framework
-      return agent.handleRequest(request, env);
-    }
-
-    // For other requests, return basic info
-    return new Response("Advisory Board MCP Server - Use /sse endpoint for MCP connection", { 
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain",
-        "Access-Control-Allow-Origin": "*",
-      }
-    });
-  }
-};
+// Correct export for Cloudflare Agents framework
+export default AdvisoryBoardMCP;
