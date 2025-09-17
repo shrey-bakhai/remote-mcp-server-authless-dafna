@@ -81,23 +81,88 @@ Use "hold_board_meeting" to get their advice on any business challenge!`
 export default {
   async fetch(request: Request): Promise<Response> {
     if (request.url.includes('/sse')) {
-      // Handle SSE connection for remote MCP
+      // Handle MCP over Server-Sent Events
       const { readable, writable } = new TransformStream();
       const writer = writable.getWriter();
+      const encoder = new TextEncoder();
       
-      // Simple SSE response
-      writer.write(new TextEncoder().encode(`data: {"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}}}}\n\n`));
+      // Send MCP server info
+      const serverInfo = {
+        jsonrpc: "2.0",
+        method: "initialize",
+        params: {
+          protocolVersion: "2024-11-05",
+          capabilities: {
+            tools: {},
+            resources: {},
+            prompts: {}
+          },
+          serverInfo: {
+            name: "advisory-board",
+            version: "1.0.0"
+          }
+        }
+      };
+      
+      await writer.write(encoder.encode(`data: ${JSON.stringify(serverInfo)}\n\n`));
+      
+      // Handle incoming messages (simplified)
+      if (request.method === 'POST') {
+        const body = await request.text();
+        const message = JSON.parse(body);
+        
+        if (message.method === 'tools/list') {
+          const response = {
+            jsonrpc: "2.0",
+            id: message.id,
+            result: {
+              tools: [
+                {
+                  name: "hold_board_meeting",
+                  description: "Get advice from your virtual advisory board on any business topic",
+                  inputSchema: {
+                    type: "object",
+                    properties: {
+                      topic: { type: "string", description: "What business challenge do you need advice on?" },
+                      background: { type: "string", description: "Give context about your situation" },
+                      advisors: {
+                        type: "array",
+                        items: { type: "string", enum: ['tim_cook', 'warren_buffett', 'maya_angelou', 'jamie_dimon', 'charlie_munger', 'art_gensler'] },
+                        description: "Pick 2-4 advisors for the best meeting"
+                      }
+                    },
+                    required: ["topic", "background", "advisors"]
+                  }
+                },
+                {
+                  name: "list_advisors",
+                  description: "See who's on your advisory board",
+                  inputSchema: {
+                    type: "object",
+                    properties: {},
+                    required: []
+                  }
+                }
+              ]
+            }
+          };
+          await writer.write(encoder.encode(`data: ${JSON.stringify(response)}\n\n`));
+        }
+      }
       
       return new Response(readable, {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST',
+          'Access-Control-Allow-Headers': 'Content-Type'
         }
       });
     }
     
-    return new Response('MCP Server Running', { status: 200 });
+    return new Response('MCP Advisory Board Server Running', { status: 200 });
   }
 };
 
