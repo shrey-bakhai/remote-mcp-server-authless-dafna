@@ -1,5 +1,5 @@
-import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 
 // Board member personas
@@ -48,33 +48,30 @@ const BOARD_MEMBERS = {
   }
 };
 
-export class AdvisoryBoardMCP extends McpAgent {
-  server = new McpServer({
-    name: "Advisory Board",
-    version: "1.0.0",
-  });
+const server = new McpServer({
+  name: "Advisory Board",
+  version: "1.0.0",
+});
 
-  async init() {
-    // Tool for getting individual advisor input
-    this.server.tool("get_advisor_input", 
-      {
-        member: z.string().describe("Board member name (tim-cook, warren-buffett, maya-angelou, jamie-dimon, charlie-munger, art-gensler)"),
-        situation: z.string().describe("Description of the business situation or challenge"),
-        specific_question: z.string().optional().describe("Optional specific question to ask the advisor")
-      }, 
-      async ({ member, situation, specific_question }) => {
-        const advisor = BOARD_MEMBERS[member.toLowerCase().replace(/[\s-]/g, '-')];
-        
-        if (!advisor) {
-          return {
-            content: [{
-              type: "text",
-              text: `Board member "${member}" not found. Available advisors: ${Object.keys(BOARD_MEMBERS).join(', ')}`
-            }]
-          };
-        }
+server.tool("get_advisor_input", 
+  {
+    member: z.string().describe("Board member name (tim-cook, warren-buffett, maya-angelou, jamie-dimon, charlie-munger, art-gensler)"),
+    situation: z.string().describe("Description of the business situation or challenge"),
+    specific_question: z.string().optional().describe("Optional specific question to ask the advisor")
+  }, 
+  async ({ member, situation, specific_question }) => {
+    const advisor = BOARD_MEMBERS[member.toLowerCase().replace(/[\s-]/g, '-')];
+    
+    if (!advisor) {
+      return {
+        content: [{
+          type: "text",
+          text: `Board member "${member}" not found. Available advisors: ${Object.keys(BOARD_MEMBERS).join(', ')}`
+        }]
+      };
+    }
 
-        const prompt = `PERSONA: ${advisor.name} - ${advisor.role}
+    const prompt = `PERSONA: ${advisor.name} - ${advisor.role}
 
 EXPERTISE: ${advisor.expertise.join(', ')}
 PHILOSOPHY: ${advisor.philosophy}
@@ -85,111 +82,73 @@ ${specific_question ? `SPECIFIC QUESTION: ${specific_question}` : ''}
 
 Respond as ${advisor.name} would, providing specific, actionable advice based on your expertise and decision-making approach. Stay completely in character with your communication style.`;
 
-        return {
-          content: [{
-            type: "text",
-            text: prompt
-          }]
-        };
-      }
-    );
+    return {
+      content: [{
+        type: "text",
+        text: prompt
+      }]
+    };
+  }
+);
 
-    // Tool for convening a board meeting
-    this.server.tool("convene_board_meeting",
-      {
-        topic: z.string().describe("Main topic for the board meeting"),
-        context: z.string().describe("Background context and details for the meeting"),
-        urgency: z.enum(["low", "medium", "high"]).default("medium").describe("Urgency level of the meeting")
-      },
-      async ({ topic, context, urgency }) => {
-        const prompt = `VIRTUAL BOARD MEETING - ${topic.toUpperCase()}
+server.tool("convene_board_meeting",
+  {
+    topic: z.string().describe("Main topic for the board meeting"),
+    context: z.string().describe("Background context and details for the meeting")
+  },
+  async ({ topic, context }) => {
+    const prompt = `VIRTUAL BOARD MEETING - ${topic.toUpperCase()}
 
 CONTEXT: ${context}
-URGENCY: ${urgency}
 
 Board Members Present:
 ${Object.entries(BOARD_MEMBERS).map(([key, advisor]) => 
   `• ${advisor.name} (${advisor.role}) - ${advisor.expertise.slice(0, 2).join(', ')}`
 ).join('\n')}
 
-MEETING STRUCTURE:
-1. SITUATION ANALYSIS - What are we really dealing with?
-2. INDIVIDUAL PERSPECTIVES - Each advisor provides their unique lens
-3. RISK & OPPORTUNITY ASSESSMENT - What could go right/wrong?
-4. ACTIONABLE RECOMMENDATIONS - Specific next steps
-5. SUCCESS METRICS - How will we measure progress?
+Each advisor should provide their unique perspective, ask clarifying questions, and give specific advice based on their expertise.`;
 
-Each advisor should provide their unique perspective, ask clarifying questions, and give specific advice based on their expertise. Format as a structured board meeting with clear sections for each advisor's input.`;
+    return {
+      content: [{
+        type: "text",
+        text: prompt
+      }]
+    };
+  }
+);
 
-        return {
-          content: [{
-            type: "text",
-            text: prompt
-          }]
-        };
-      }
-    );
-
-    // Tool for crisis management
-    this.server.tool("crisis_management",
-      {
-        crisis_description: z.string().describe("Description of the crisis situation"),
-        immediate_concerns: z.string().describe("Most pressing immediate concerns")
-      },
-      async ({ crisis_description, immediate_concerns }) => {
-        const prompt = `EMERGENCY BOARD MEETING - CRISIS RESPONSE
+server.tool("crisis_management",
+  {
+    crisis_description: z.string().describe("Description of the crisis situation"),
+    immediate_concerns: z.string().describe("Most pressing immediate concerns")
+  },
+  async ({ crisis_description, immediate_concerns }) => {
+    const prompt = `EMERGENCY BOARD MEETING - CRISIS RESPONSE
 
 CRISIS: ${crisis_description}
 IMMEDIATE CONCERNS: ${immediate_concerns}
 
-Your board is convening an emergency session. Each advisor should provide:
+Your board is convening an emergency session. Each advisor should provide immediate actions and strategic response plans.`;
 
-IMMEDIATE PRIORITIES (Next 24-48 hours):
-- Tim Cook: Operational response and damage control
-- Jamie Dimon: Financial exposure and liquidity management
-- Maya Angelou: Communication strategy and stakeholder messaging
-
-STRATEGIC RESPONSE (Week 1-4):
-- Warren Buffett: Long-term value protection and opportunity assessment
-- Charlie Munger: Decision-making frameworks to avoid further mistakes
-- Art Gensler: Brand and reputation management
-
-Each advisor should provide:
-1. Immediate actions (next 24 hours)
-2. Week 1 priorities 
-3. Key messages for different stakeholders
-4. Metrics to track recovery progress
-5. Long-term strategic adjustments
-
-Focus on practical, executable recommendations for both immediate stabilization and long-term recovery.`;
-
-        return {
-          content: [{
-            type: "text",
-            text: prompt
-          }]
-        };
-      }
-    );
+    return {
+      content: [{
+        type: "text",
+        text: prompt
+      }]
+    };
   }
-}
+);
 
-// Use the static mount method for SSE endpoint
 export default {
-  async fetch(request: Request, env: any, context: any): Promise<Response> {
+  async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     
     if (url.pathname === "/sse") {
-      // Use the static mount method from McpAgent
-      return AdvisoryBoardMCP.mount('/sse')(request, env, context);
+      const transport = new SSEServerTransport("/message", request);
+      await server.connect(transport);
+      return transport.response;
     }
 
-    return new Response("Advisory Board MCP Server - Use /sse endpoint for MCP connection", { 
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain",
-        "Access-Control-Allow-Origin": "*",
-      }
-    });
+    return new Response("Advisory Board MCP Server - Use /sse endpoint");
   }
 };
