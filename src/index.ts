@@ -1,5 +1,6 @@
-import { McpAgent } from "agents/mcp";
+import { WorkerEntrypoint } from "cloudflare:workers";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 
 // Board member personas
@@ -48,13 +49,21 @@ const BOARD_MEMBERS = {
   }
 };
 
-export class AdvisoryBoardMCP extends McpAgent {
-  server = new McpServer({
-    name: "Advisory Board",
-    version: "1.0.0",
-  });
+export class AdvisoryBoardMCP extends WorkerEntrypoint<Env> {
+  private server: McpServer;
 
-  async init() {
+  constructor(ctx: ExecutionContext, env: Env) {
+    super(ctx, env);
+    
+    this.server = new McpServer({
+      name: "Advisory Board",
+      version: "1.0.0",
+    });
+
+    this.setupTools();
+  }
+
+  private setupTools() {
     // Tool for getting individual advisor input
     this.server.tool("get_advisor_input", 
       {
@@ -172,12 +181,26 @@ Focus on practical, executable recommendations for both immediate stabilization 
       }
     );
   }
+
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    
+    if (url.pathname === "/sse") {
+      // Handle SSE transport for MCP
+      const transport = new SSEServerTransport("/message", request);
+      await this.server.connect(transport);
+      return transport.response;
+    }
+
+    return new Response("Advisory Board MCP Server - Use /sse endpoint for MCP connection", { 
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain",
+        "Access-Control-Allow-Origin": "*",
+      }
+    });
+  }
 }
 
-// ES Modules export
-export default {
-  async fetch(request: Request, env: any, context: any): Promise<Response> {
-    // This should be handled by the Cloudflare Agents SDK
-    return new Response("Advisory Board MCP Server", { status: 200 });
-  }
-};
+// Default export for Cloudflare Workers
+export default AdvisoryBoardMCP;
