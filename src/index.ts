@@ -174,5 +174,22 @@ Focus on practical, executable recommendations for both immediate stabilization 
   }
 }
 
-// Correct export for Cloudflare Agents framework
-export default AdvisoryBoardMCP;
+// Use the static mount method for SSE endpoint
+export default {
+  async fetch(request: Request, env: any, context: any): Promise<Response> {
+    const url = new URL(request.url);
+    
+    if (url.pathname === "/sse") {
+      // Use the static mount method from McpAgent
+      return AdvisoryBoardMCP.mount('/sse')(request, env, context);
+    }
+
+    return new Response("Advisory Board MCP Server - Use /sse endpoint for MCP connection", { 
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain",
+        "Access-Control-Allow-Origin": "*",
+      }
+    });
+  }
+};
