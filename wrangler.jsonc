@@ -1,6 +1,4 @@
-{
-	"name": "remote-mcp-server-authless-dafna",
-	"main": "src/index.ts",
-	"compatibility_date": "2025-03-10",
-	"compatibility_flags": ["nodejs_compat"]
-}
+name = "advisory-board"
+main = "index.ts"
+compatibility_date = "2024-11-05"
+compatibility_flags = ["nodejs_compat"]
