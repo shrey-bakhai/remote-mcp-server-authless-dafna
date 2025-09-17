@@ -173,3 +173,11 @@ Focus on practical, executable recommendations for both immediate stabilization 
     );
   }
 }
+
+// ES Modules export
+export default {
+  async fetch(request: Request, env: any, context: any): Promise<Response> {
+    // This should be handled by the Cloudflare Agents SDK
+    return new Response("Advisory Board MCP Server", { status: 200 });
+  }
+};
