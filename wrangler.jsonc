@@ -4,29 +4,6 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2025-03-10",
 	"compatibility_flags": ["nodejs_compat"],
-	"migrations": [
-		{
-			"new_sqlite_classes": ["AdvisoryBoardMCP"],
-			"tag": "v1"
-		},
-		{
-			"renamed_classes": [
-				{
-					"from": "MyMCP",
-					"to": "AdvisoryBoardMCP"
-				}
-			],
-			"tag": "v2"
-		}
-	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"class_name": "AdvisoryBoardMCP",
-				"name": "MCP_OBJECT"
-			}
-		]
-	},
 	"observability": {
 		"enabled": true
 	}
