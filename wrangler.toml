@@ -1,4 +1,4 @@
-name = "advisory-board"
+name = "dafna-board"
 main = "index.ts"
 compatibility_date = "2024-11-05"
 compatibility_flags = ["nodejs_compat"]
